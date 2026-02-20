@@ -1,0 +1,25 @@
+Dataset folder layout (so paths in configs/run_amd.yaml work)
+================================================================
+
+Place your datasets folder INSIDE the pamcl folder so that paths are:
+
+  pamcl/
+    run_pamcl.py
+    configs/
+    datasets/
+      LA_dev/
+        flac/
+          <audio_id>.flac   (one file per trial)
+        protocol.txt        (ASVSpoof format: speaker_id audio_id ... label)
+      LA_eval/
+        flac/
+          <audio_id>.flac
+        protocol.txt
+
+Protocol format (ASVSpoof 2021): one line per trial, space-separated.
+  Column 5 (0-indexed 5) = label: "bonafide" or "spoof"
+  Column 1 = audio_id (must match filename without .flac)
+
+If your folder names differ, edit configs/run_amd.yaml:
+  data.train_dir, data.train_protocol, data.eval_dir, data.eval_protocol
+Use paths relative to the pamcl folder, e.g. "datasets/LA_dev/flac".

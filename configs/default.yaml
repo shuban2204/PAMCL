@@ -1,0 +1,131 @@
+# ABOUTME: Default configuration for PAMCL training
+# ABOUTME: Phoneme-Aware Multi-Layer Contrastive Learning for Audio Deepfake Detection
+
+# Model configuration
+model:
+  # SSL backbone: "facebook/wav2vec2-xls-r-300m" or "microsoft/wavlm-base-plus"
+  ssl_backbone: "facebook/wav2vec2-xls-r-300m"
+  freeze_ssl: true  # Freeze SSL backbone (unfreeze for fine-tuning with larger GPU)
+  gradient_checkpointing: true  # Enable for memory savings
+  use_data_parallel: true  # Auto-enable DataParallel when multiple GPUs detected
+  
+  # Phoneme encoder settings
+  phoneme_encoder:
+    # Pretrained model for phoneme extraction via CTC
+    ctc_model: "facebook/wav2vec2-base-960h"
+    num_phonemes: 39  # CMU phoneme set size
+    embedding_dim: 256
+  
+  # SLS (Sensitive Layer Selection) module
+  sls:
+    hidden_dim: 512
+    use_sigmoid: true  # Sigmoid allows multiple layers to have high weights
+  
+  # Contrastive learning settings
+  contrastive:
+    projection_dim: 256
+    temperature: 0.07
+    use_phoneme_prototypes: true
+    num_prototype_speakers: 100  # Number of speakers for prototype bank
+  
+  # Classification head
+  classifier:
+    hidden_dim: 512
+    dropout: 0.3
+
+# Data configuration
+data:
+  # ASVSpoof 2021 LA: train on dev, report EER on eval for official metrics.
+  # For 1-1.5%% EER target, use dev for training and eval for final EER.
+  train_dir: "D:/My_Files/Research/Datasets/ASVSpoof21/ASVspoof2021_LA_eval/ASVspoof2021_LA_eval/flac"
+  train_protocol: "D:/My_Files/Research/Datasets/ASVSpoof21/LA-keys-full/keys/LA/CM/trial_metadata.txt"
+  # NOTE: LA dev set not downloaded — using train/val split from LA eval
+  # dev_dir: "D:/My_Files/Research/Datasets/ASVSpoof21/ASVspoof2021_LA_dev/ASVspoof2021_LA_dev/flac"
+  # dev_protocol: "D:/My_Files/Research/Datasets/ASVSpoof21/LA-keys-full/keys/LA/CM/trial_metadata_dev.txt"
+  train_samples: 50000   # Number of samples from LA eval for training
+  val_samples: 7000      # Number of samples from LA eval for validation
+  eval_dir: "D:/My_Files/Research/Datasets/ASVSpoof21/ASVspoof2021_DF_eval_part00/ASVspoof2021_DF_eval/flac"
+  eval_protocol: "D:/My_Files/Research/Datasets/ASVSpoof21/DF-keys-full/keys/DF/CM/trial_metadata.txt"
+  
+  # MLAAD v5 fake audio (for augmenting training with diverse TTS samples)
+  mlaad_fake_dir: "D:/My_Files/Research/Datasets/MLAAD/Mlaad_v5/mlaad_v5/fake"
+  
+  # Audio settings
+  sample_rate: 16000
+  max_audio_len: 64000  # 4 seconds at 16kHz
+  min_audio_len: 16000  # 1 second minimum
+  
+  # Data loading workers (set to 0 on Windows for debugging)
+  num_workers: 8
+
+# Training configuration
+training:
+  # Device settings
+  device: "cuda"
+  mixed_precision: true  # FP16/BF16 for memory efficiency and speed
+  
+  # Batch and accumulation
+  # H100 80GB: batch_size=256, grad_accum=1
+  # T4 16GB:   batch_size=32,  grad_accum=8
+  # RTX 3050:  batch_size=8,   grad_accum=32
+  batch_size: 256
+  gradient_accumulation_steps: 1  # Effective batch size = batch_size * grad_accum
+  
+  # Training phases
+  phase1:  # Phoneme contrastive pre-training
+    epochs: 3  # Start small, can increase if needed
+    lr: 0.0001
+    weight_decay: 0.01
+  
+  phase2:  # Multi-task fine-tuning
+    epochs: 5  # Start small, can increase if needed
+    lr_ssl: 0.000001  # Frozen or very small LR for SSL
+    lr_new: 0.0001  # For new modules
+    weight_decay: 0.01
+  
+  # Loss weights
+  lambda_ce: 1.0  # Cross-entropy classification loss
+  lambda_contrastive: 0.5  # Contrastive loss weight
+  lambda_phoneme_consistency: 0.3  # Phoneme consistency loss weight
+  
+  # Regularization
+  label_smoothing: 0.1
+  
+  # Checkpointing
+  checkpoint_dir: "checkpoints"
+  save_every_epochs: 5
+  
+  # Early stopping
+  patience: 10
+  min_delta: 0.001
+
+# Augmentation settings (RawBoost-inspired)
+augmentation:
+  enabled: true
+  probability: 0.5
+  
+  # Noise augmentation
+  add_noise: true
+  noise_snr_range: [10, 30]
+  
+  # Speed perturbation
+  speed_perturb: true
+  speed_range: [0.9, 1.1]
+  
+  # Reverberation
+  reverb: false  # Set true if RIR dataset available
+
+# Logging
+logging:
+  log_dir: "logs"
+  log_every_steps: 100
+  tensorboard: true
+
+# Evaluation
+evaluation:
+  # InTheWild dataset for out-of-domain evaluation
+  inthewild_dir: "InTheWild"
+  
+  # Metrics
+  compute_eer: true
+  compute_auc: true

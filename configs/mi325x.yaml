@@ -1,0 +1,83 @@
+# ABOUTME: High-resource config for AMD Mi325x (256GB) targeting 1-1.5% EER on ASVSpoof 2021 LA
+# ABOUTME: Unfreeze SSL, larger batch, longer audio, more epochs
+
+model:
+  ssl_backbone: "facebook/wav2vec2-xls-r-300m"
+  freeze_ssl: false
+  gradient_checkpointing: false
+
+  phoneme_encoder:
+    ctc_model: "facebook/wav2vec2-base-960h"
+    num_phonemes: 39
+    embedding_dim: 256
+
+  sls:
+    hidden_dim: 512
+    use_sigmoid: true
+
+  contrastive:
+    projection_dim: 256
+    temperature: 0.07
+    use_phoneme_prototypes: true
+
+  classifier:
+    hidden_dim: 512
+    dropout: 0.3
+
+data:
+  train_dir: "D:/My_Files/Research/ASVSpoof21/ASVspoof2021_LA_dev/ASVspoof2021_LA_dev/flac"
+  train_protocol: "D:/My_Files/Research/ASVSpoof21/LA-keys-full/keys/LA/CM/trial_metadata_dev.txt"
+  dev_dir: "D:/My_Files/Research/ASVSpoof21/ASVspoof2021_LA_dev/ASVspoof2021_LA_dev/flac"
+  dev_protocol: "D:/My_Files/Research/ASVSpoof21/LA-keys-full/keys/LA/CM/trial_metadata_dev.txt"
+  eval_dir: "D:/My_Files/Research/ASVSpoof21/ASVspoof2021_LA_eval/ASVspoof2021_LA_eval/flac"
+  eval_protocol: "D:/My_Files/Research/ASVSpoof21/LA-keys-full/keys/LA/CM/trial_metadata.txt"
+  sample_rate: 16000
+  max_audio_len: 96000
+  min_audio_len: 16000
+  num_workers: 4
+
+training:
+  device: "cuda"
+  mixed_precision: true
+  batch_size: 32
+  gradient_accumulation_steps: 2
+
+  phase1:
+    epochs: 2
+    lr: 0.0001
+    weight_decay: 0.01
+
+  phase2:
+    epochs: 25
+    lr_ssl: 0.000005
+    lr_new: 0.00003
+    weight_decay: 0.01
+
+  lambda_ce: 1.0
+  lambda_contrastive: 0.4
+  lambda_phoneme_consistency: 0.2
+  label_smoothing: 0.1
+  checkpoint_dir: "checkpoints"
+  save_every_epochs: 5
+  save_best_by: "eer"
+  patience: 8
+  min_delta: 0.0005
+
+augmentation:
+  enabled: true
+  probability: 0.6
+  add_noise: true
+  noise_snr_range: [12, 28]
+  speed_perturb: true
+  speed_range: [0.9, 1.1]
+  reverb: false
+
+logging:
+  log_dir: "logs"
+  log_every_steps: 50
+  tensorboard: true
+
+evaluation:
+  inthewild_dir: "InTheWild"
+  compute_eer: true
+  compute_auc: true

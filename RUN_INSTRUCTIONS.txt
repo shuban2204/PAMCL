@@ -1,0 +1,19 @@
+On the AMD instance (after uploading the pamcl folder and your datasets)
+=======================================================================
+
+1. Place your data so it matches configs/run_amd.yaml (see DATASET_LAYOUT.txt).
+   Example: pamcl/datasets/LA_dev/flac/*.flac and pamcl/datasets/LA_dev/protocol.txt
+
+2. Activate your venv, then from the pamcl directory run:
+
+   python run_pamcl.py
+
+   (Uses configs/run_amd.yaml by default: 5 epochs, weights in weights/)
+
+3. After 5 epochs you will see:
+   - EER, AUC, Accuracy and val loss in the final "TRAINING COMPLETE" block
+   - Weights saved as: weights/pamcl_epoch_1.pt ... weights/pamcl_epoch_5.pt
+
+Optional:
+   python run_pamcl.py --config configs/run_amd.yaml --resume weights/last_checkpoint.pt
+   python run_pamcl.py --eval-only weights/pamcl_epoch_5.pt
